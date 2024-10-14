@@ -216,3 +216,39 @@ class Sokoban(Problem):
             if caixa in self.goal:
                 n_caixas_desarrumadas -= 1
         return n_caixas_desarrumadas
+    
+    def h_util(self, node):
+        clone = copy.deepcopy(node.state)
+        hValue = 0
+        
+        if self.goal_test(clone):
+            return 0
+        
+        assBox = []
+
+        for goal in self.goal:
+            if len(clone['caixas']) > len(assBox):
+                minDist = 0
+                for box in clone['caixas']:
+                    dist = manhattan(box, goal)
+                    if box not in assBox and (minDist == 0 or dist < minDist[0]):
+                        minDist = [dist, box]
+
+                assBox.append(minDist[1])
+                hValue += minDist[0]
+
+        max_distancia_sokoban = 0
+        sokoban = clone['sokoban']
+        for caixa in clone['caixas']:
+            if (caixa not in self.goal):
+                d_sokoban = manhattan(sokoban,caixa)
+                if d_sokoban > max_distancia_sokoban:
+                    max_distancia_sokoban = d_sokoban
+                    
+        hValue += max_distancia_sokoban
+
+        return hValue
+            
+
+            
+
