@@ -24,15 +24,14 @@ def beam_search_plus_count(problem, W, f):
         explored.add(node.state)    # "explored" just means judging if it's the end
         if(problem.goal_test(node.state)):  # Cave Johnson, we're done here?
             return node, len(explored)
-        visited_not_explored.remove(node.state) # literally just explored this state, move on
+        if (node.state in visited_not_explored):
+            visited_not_explored.remove(node.state) # literally just explored this state, move on
         for child in node.expand(problem):
             if child.state not in explored: # not explored means we add to the list
                 frontier.append(child)
                 if child.state not in visited_not_explored:
                     visited_not_explored.add(child.state)
-
         frontier = get_W_best(frontier, W, f)   # purge unwanted children
-
     return None, len(explored)
 
 def get_W_best (queue, W, f):
@@ -54,8 +53,11 @@ def IW_beam_search(problem, h):
     se obter uma solução. Devolve a solução, o W com que se encontrou a solução, e o número total (acumulado desde W=1)
     de nós expandidos. Assume-se que existe uma solução."""
     W = 0
+    totallength = 0
     done = None
     while done == None:
         W = W+1
         done, length = beam_search(problem, W, h)
-    return done, W, length
+        totallength += length
+        #print(beam_search(problem, W, h))
+    return done, W, totallength
