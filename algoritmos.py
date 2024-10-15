@@ -21,9 +21,9 @@ def beam_search_plus_count(problem, W, f):
     it's not in vain"""
     while frontier:
         node = frontier.pop()
+        explored.add(node.state)    # "explored" just means judging if it's the end
         if(problem.goal_test(node.state)):  # Cave Johnson, we're done here?
             return node, len(explored)
-        explored.add(node.state)    # "explored" just means judging if it's the end
         visited_not_explored.remove(node.state) # literally just explored this state, move on
         for child in node.expand(problem):
             if child.state not in explored: # not explored means we add to the list
@@ -48,7 +48,6 @@ def beam_search(problem, W, h=None):
     else in your Problem subclass."""
     h = memoize(h or problem.h, 'h')
     return beam_search_plus_count(problem, W, lambda n: n.path_cost + h(n))
-
 
 def IW_beam_search(problem, h):
     """IW_beam_search (Iterative Widening Beam Search) começa com beam width W=1 e aumenta W iterativamente até
