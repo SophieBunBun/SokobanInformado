@@ -28,9 +28,15 @@ def beam_search_plus_count(problem, W, f):
             visited_not_explored.remove(node.state) # literally just explored this state, move on
         for child in node.expand(problem):
             if child.state not in explored: # not explored means we add to the list
-                frontier.append(child)
                 if child.state not in visited_not_explored:
+                    frontier.append(child)
                     visited_not_explored.add(child.state)
+                else:
+                    if child in frontier:
+                        incumbent = frontier[child]
+                        if f(child) < f(incumbent):
+                           del frontier[incumbent]
+                           frontier.append(child)
         frontier = get_W_best(frontier, W, f)   # purge unwanted children
     return None, len(explored)
 
@@ -59,5 +65,4 @@ def IW_beam_search(problem, h):
         W = W+1
         done, length = beam_search(problem, W, h)
         totallength += length
-        #print(beam_search(problem, W, h))
     return done, W, totallength
