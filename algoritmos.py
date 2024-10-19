@@ -2,7 +2,48 @@ from searchPlus import *
 from sokoban import *
 from ProblemaGrafoHs import *
 
+def beam_search_plus_count_soph(problem, W, f):
+    """Beam Search: search the nodes with the best W scores in each depth.
+       Return the solution and how many nodes were expanded."""
+    f = memoize(f, 'f')
+    node = Node(problem.initial)
+    if problem.goal_test(node.state):   # start from root
+        return node, 0
+    frontier = PriorityQueue(min, f)    # frontier is a priorityqueue of the ones that might be interesting to check
+    frontier.append(node)
 
+    explored = set()    # to keep track of all explored; fast check to not waste time in parsing for comparisons
+    visited_not_explored = {node.state} # to compare similar states from different paths
+
+    """frontier will be destroyed over time as we check all possibile states along
+    the heuristic in f; when it's all over, return how many attempts were made so
+    it's not in vain"""
+    while frontier:
+        newFrontier = PriorityQueue(min, f)
+        while frontier:
+            node = frontier.pop()
+            explored.add(node.state)    # "explored" just means judging if it's the end
+            # print (node.solution())
+            # print (W)
+            if(problem.goal_test(node.state)):  # Cave Johnson, we're done here?
+                return node, len(explored)
+            if (node.state in visited_not_explored):
+                visited_not_explored.remove(node.state) # literally just explored this state, move on
+            for child in node.expand(problem):
+                if child.state not in explored: # not explored means we add to the list
+
+                    if child.state not in visited_not_explored:
+                        newFrontier.append(child)
+                        visited_not_explored.add(child.state)
+                    else:
+                        if child in newFrontier:
+                            incumbent = newFrontier[child]
+                            if f(child) < f(incumbent):
+                                del newFrontier[incumbent]
+                                newFrontier.append(child)
+        frontier = get_W_best(newFrontier, W, f)   # purge unwanted children
+    return None, len(explored)
+    
 def beam_search_plus_count_jack(problem, W, f):
     """Beam Search: search the nodes with the best W scores in each depth.
        Return the solution and how many nodes were expanded."""
@@ -41,13 +82,6 @@ def beam_search_plus_count_jack(problem, W, f):
         frontier = get_W_best(frontier, W, f)   # purge unwanted children
     return None, len(explored)
 
-def get_W_best (queue, W, f):
-    freeman = PriorityQueue(min, f)
-    for x in range(W):
-        if len(queue) > 0:
-            freeman.append(queue.pop())
-    return freeman
-
 def beam_search_plus_count(problem, W, f):
     """Beam Search: search the nodes with the best W scores in each depth.
        Return the solution and how many nodes were expanded."""
@@ -55,42 +89,61 @@ def beam_search_plus_count(problem, W, f):
     node = Node(problem.initial)
     if problem.goal_test(node.state):   # start from root
         return node, 0
-    frontier = PriorityQueue(min, f)    # frontier is a priorityqueue of the ones that might be interesting to check
-    frontier.append(node)
+    explorable = PriorityQueue(min, f)    # frontier is a priorityqueue of the ones that might be interesting to check
+    explorable.append(node)
 
     explored = set()    # to keep track of all explored; fast check to not waste time in parsing for comparisons
-    visited_not_explored = {node.state} # to compare similar states from different paths
+    win = None
 
     """frontier will be destroyed over time as we check all possibile states along
     the heuristic in f; when it's all over, return how many attempts were made so
     it's not in vain"""
-    while frontier:
-        newFrontier = PriorityQueue(min, f)
-        while frontier:
-            node = frontier.pop()
-            explored.add(node.state)    # "explored" just means judging if it's the end
-            print (node.solution())
-            print (W)
-            if(problem.goal_test(node.state)):  # Cave Johnson, we're done here?
-                return node, len(explored)
-            if (node.state in visited_not_explored):
-                visited_not_explored.remove(node.state) # literally just explored this state, move on
-            for child in node.expand(problem):
-                if child.state not in explored: # not explored means we add to the list
+    while explorable:
+        explorable, explored, win = level(explorable, explored, problem, W, f)
+        if win != None: break
+    return win, len(explored)
 
-                    if child.state not in visited_not_explored:
-                        newFrontier.append(child)
-                        visited_not_explored.add(child.state)
-                    else:
-                        if child in newFrontier:
-                            incumbent = newFrontier[child]
-                            if f(child) < f(incumbent):
-                                del newFrontier[incumbent]
-                                newFrontier.append(child)
-        frontier = get_W_best(newFrontier, W, f)   # purge unwanted children
-    return None, len(explored)
-            
-    
+"""
+Repeat until we've found all options to be in explored
+execute for each level
+
+for any given level, there are at most W given nodes
+expand them all, keep only the W highest
+repeat"""
+
+def level(explorable, explored, problem, W, f):
+    visited_not_explored = set()
+    children = PriorityQueue(min, f)
+
+    while explorable:   # for every one of this level's expandable nodes
+        node = explorable.pop() 
+        if(problem.goal_test(node.state)):
+            return explorable, explored, node
+        explored.add(node.state)
+        if (node.state in visited_not_explored):
+            visited_not_explored.remove(node.state) # just explored
+        for child in node.expand(problem):
+            if child.state not in explored:
+                if child.state not in visited_not_explored:
+                    visited_not_explored.add(child.state)
+                    children.append(child)
+                else:
+                    if child in children:
+                        incumbent = children[child]
+                        if f(child) < f(incumbent):
+                            del children[incumbent]
+                            children.add(child)
+#            print(len(children))
+    children = get_W_best(children, W, f)
+    return children, explored, None
+
+
+def get_W_best (queue, W, f):
+    freeman = PriorityQueue(min, f)
+    for x in range(W):
+        if len(queue) > 0:
+            freeman.append(queue.pop())
+    return freeman
 
 def beam_search(problem, W, h=None):
     """Beam graph search with f(n) = g(n)+h(n).
